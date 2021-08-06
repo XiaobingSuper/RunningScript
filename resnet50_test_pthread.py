@@ -12,8 +12,8 @@ model = torchvision.models.resnet50().eval()
 model = model.to(memory_format=torch.channels_last)
 model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
 
-warm_up = 100
-num_iter = 500
+warm_up = 1000
+num_iter = 1000
 batch_size = 1
 #batch_size = 64
 
@@ -36,7 +36,7 @@ def run_model(m, tid):
     time_consume += time.time() - start_time
     print('Instance num %d Avg Time/Iteration %f msec Throughput %f images/sec' %(tid, time_consume*1000/num_iter, num_iter/time_consume))
 
-num_instances = 8
+num_instances = 14
 threads = []
 print("begi running.........................")
 for i in range(1, num_instances+1):
@@ -45,7 +45,7 @@ for i in range(1, num_instances+1):
     thread.start()
 
 for thread in threads:
-    thread.jion()
+    thread.join()
 
 '''
 t1 = threading.Thread(target=run_model, args=(x, trace_model, 1))
