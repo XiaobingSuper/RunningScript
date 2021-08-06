@@ -5,6 +5,8 @@ import time
 import torch.profiler as profiler
 from torch.utils import mkldnn as mkldnn_utils
 import copy
+from torch.utils import ThroughputBenchmark
+
 torch.manual_seed(1000)
 
 #model = torchvision.models.resnet50().eval()
@@ -45,32 +47,25 @@ class Model(torch.nn.Module):
 #model = Model().eval()
 #print(model)
 model = torchvision.models.resnet50().eval()
+model = model.to(memory_format=torch.channels_last)
+model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
 
-'''
-model = ipex.fx.conv_bn_fuse(model)
-model = ipex.convert_module_data_type(model, torch.bfloat16)
-'''
-model = ipex.utils.optimize(model, torch.bfloat16)
-#print(model.conv.weight.dtype)
 
 warm_up = 300
 #batch_size = 1
 batch_size = 1
 
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-model = model.to(memory_format=torch.channels_last)
 
 with ipex.amp.autocast(enabled=True, configure=ipex.conf.AmpConf(torch.bfloat16)), torch.no_grad():
     trace_model = torch.jit.trace(model, x, check_trace=False).eval()
 
-#trace_model = mkldnn_utils.to_mkldnn(copy.deepcopy(model), dtype=torch.bfloat16)
 with torch.no_grad():
     for i in range(warm_up):
         y = trace_model(x)
-    #print(trace_model.graph_for(x))
 
 print("begin running...............")
-
+'''
 num_iter = 1000
 fwd = 0
 
@@ -83,11 +78,29 @@ with torch.no_grad():
 
 avg_time = fwd / num_iter * 1000
 print("batch_size = %d, running time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
+'''
 
+num_instance=14
+with torch.no_grad():
+    y = trace_model(x)
+bench = ThroughputBenchmark(trace_model)
+for j in range(num_instance):
+    x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
+    bench.add_input(x)
+
+stats = bench.benchmark(
+        num_calling_threads=num_instance,
+        num_warmup_iters=500,
+        num_iters=1000 * num_instance)
+print(stats)
+latency = stats.latency_avg_ms
+print(latency)
+
+'''
 def trace_handler(prof):
     print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
     # prof.export_chrome_trace("rn50_trace_" + str(prof.step_num) + ".json")
-'''
+
 with torch.no_grad():
     with profiler.profile(
         activities=[profiler.ProfilerActivity.CPU],
