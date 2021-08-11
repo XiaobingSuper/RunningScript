@@ -23,7 +23,7 @@ ipex.core._jit_set_llga_enabled(True)
 torch._C._jit_set_profiling_mode(True)
 torch._C._jit_set_profiling_executor(True)
 model = ipex.fx.conv_bn_fuse(model)
-conf = ipex.AmpConf(torch.int8, '/localdisk/xiaobing/test/resnet50_configure.json')
+conf = ipex.AmpConf(torch.int8, 'resnet50_configure.json')
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
 
 with torch.no_grad(), ipex.amp.autocast(enabled=True, configure=conf):
