@@ -51,6 +51,7 @@ def main(file_name, verbose_type):
             result[i%56][3] +=1
     for i in range(loop_number):
         if result[i][0] == "convolution":
+            #print(result[i][3])
             r = result[i][1] + [result[i][2]]
             print(r[:])
 

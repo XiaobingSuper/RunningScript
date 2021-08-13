@@ -10,49 +10,32 @@ import threading
 model = torchvision.models.resnet50().eval()
 
 #model = model.to(memory_format=torch.channels_last)
-#model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
+model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
 
-warm_up = 100
-num_iter = 300
+warm_up = 300
+num_iter = 800
 batch_size = 1
 #batch_size = 64
 
-#x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-x =  torch.randn(batch_size, 3, 224, 224)
-ipex.core.disable_jit_opt()
-ipex.core._jit_set_llga_enabled(True)
-torch._C._jit_set_profiling_mode(True)
-torch._C._jit_set_profiling_executor(True)
-model = ipex.fx.conv_bn_fuse(model)
-conf = ipex.AmpConf(torch.int8, "resnet50_configure.json")
-with torch.no_grad(), ipex.amp.autocast(enabled=True, configure=conf):
-    trace_model = torch.jit.trace(model, x, check_trace=False).eval()
-trace_model = torch.jit._recursive.wrap_cpp_module(torch._C._freeze_module(trace_model._c, preserveParameters=True))
-with torch.no_grad():
-    y = trace_model(x)
-    pp = trace_model.graph_for(x)
-'''
+x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
 with ipex.amp.autocast(enabled=True, configure=ipex.conf.AmpConf(torch.bfloat16)), torch.no_grad():
     trace_model = torch.jit.trace(model, x, check_trace=True).eval()
     #y = trace_model(x)
-'''
-'''
+
 with torch.no_grad():
     y = trace_model(x)
-'''
 
 def run_model(m, tid):
     time_consume = 0
-    #x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-    x = torch.randn(batch_size, 3, 224, 224)
+    x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
     with torch.no_grad():
         for i in range(warm_up):
             y = m(x)
         for i in range(num_iter):
-            x1 = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-            x2 = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-            x3 = torch.randn(batch_size, 3, 224, 224)
-            x4 = torch.randn(batch_size, 3, 224, 224)
+            x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
+            #x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
+            #x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
+            #x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
             start_time = time.time()
             y = m(x)
             time_consume += time.time() - start_time
@@ -69,6 +52,7 @@ for i in range(1, num_instances+1):
 for thread in threads:
     thread.join()
 
+'''
 with torch.no_grad():
     bench = ThroughputBenchmark(trace_model)
     for i in range(14):
@@ -83,31 +67,4 @@ with torch.no_grad():
 latency = stats.latency_avg_ms
 print(latency)
 print(stats.iters_per_second)
-'''
-t1 = threading.Thread(target=run_model, args=(x, trace_model, 1))
-t2 = threading.Thread(target=run_model, args=(x, trace_model, 2))
-t3 = threading.Thread(target=run_model, args=(x, trace_model, 3))
-t4 = threading.Thread(target=run_model, args=(x, trace_model, 4))
-t5 = threading.Thread(target=run_model, args=(x, trace_model, 5))
-t6 = threading.Thread(target=run_model, args=(x, trace_model, 6))
-t7 = threading.Thread(target=run_model, args=(x, trace_model, 7))
-t8 = threading.Thread(target=run_model, args=(x, trace_model, 8))
-
-t1.start()
-t2.start()
-t3.start()
-t4.start()
-t5.start()
-t6.start()
-t7.start()
-t8.start()
-
-t1.join()
-t2.join()
-t3.join()
-t4.join()
-t5.join()
-t6.join()
-t7.join()
-t8.join()
 '''

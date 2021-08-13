@@ -51,22 +51,6 @@ with torch.no_grad():
 avg_time = fwd / num_iter * 1000
 print("batch_size = %d, running time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
 
-'''
-bench = ThroughputBenchmark(trace_model)
-for j in range(8):
-    x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
-    bench.add_input(x)
-
-stats = bench.benchmark(
-        num_calling_threads=8, 
-        num_warmup_iters=500,
-        num_iters=2000 * 8,
-        )
-print(stats)
-print("ccccccccccccccccccccccccccccc")
-latency = stats.latency_avg_ms
-print(latency)
-'''
 def trace_handler(prof):
     print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
     #prof.export_chrome_trace("rn50_trace_" + str(prof.step_num) + ".json")

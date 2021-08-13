@@ -53,7 +53,7 @@ model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
 
 warm_up = 300
 #batch_size = 1
-batch_size = 1
+batch_size = 112
 
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
 
@@ -65,7 +65,7 @@ with torch.no_grad():
         y = trace_model(x)
 
 print("begin running...............")
-'''
+
 num_iter = 1000
 fwd = 0
 
@@ -79,7 +79,6 @@ with torch.no_grad():
 avg_time = fwd / num_iter * 1000
 print("batch_size = %d, running time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
 '''
-
 num_instance=14
 with torch.no_grad():
     y = trace_model(x)
@@ -95,7 +94,7 @@ stats = bench.benchmark(
 print(stats)
 latency = stats.latency_avg_ms
 print(latency)
-
+'''
 '''
 def trace_handler(prof):
     print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
