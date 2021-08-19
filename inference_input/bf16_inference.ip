@@ -1,0 +1,1 @@
+ --reset --allow-enum-tags-only=0 --engine=cpu --dir=FWD_B  --cfg=bf16bf16bf16  --stag=ab --wtag=AB16b32a2b --dtag=ab   mb112ic2048oc1000

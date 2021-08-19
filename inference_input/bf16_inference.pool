@@ -1,0 +1,1 @@
+ --reset --allow-enum-tags-only=0 --engine=cpu --dir=FWD_I --alg=pooling_max --cfg=bf16 --tag=acdb   mb112ic64_ih112oh56kh3sh2dh0ph1_iw112ow56kw3sw2dw0pw1
