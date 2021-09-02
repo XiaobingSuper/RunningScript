@@ -14,7 +14,7 @@ model = ipex.fx.conv_bn_fuse(model)
 
 warm_up = 300
 num_iter = 1000
-batch_size = 4
+batch_size = 2
 
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
 
@@ -37,7 +37,7 @@ def run_model(m, tid):
             start_time = time.time()
             y = m(x)
             time_consume += time.time() - start_time
-    print('Instance num %d Avg Time/Iteration %f msec Throughput %f images/sec' %(tid, time_consume*1000/num_iter, num_iter/time_consume))
+    print('Instance num %d Avg Time/Iteration %f msec Throughput %f images/sec' %(tid, time_consume*1000/num_iter, batch_size*num_iter/time_consume))
 
 def run_model_profiler(m, tid):
     x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
@@ -75,15 +75,14 @@ for thread in threads:
 print("cccccccccccccccccccccccccccc")
 with torch.no_grad():
     bench = ThroughputBenchmark(trace_model)
-    for i in range(14):
+    for i in range(56):
         x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
         bench.add_input(x)
 
     stats = bench.benchmark(
-            num_calling_threads = 14,
+            num_calling_threads = 56,
             num_warmup_iters = 200,
-            num_iters=500 * 14,
-            profiler_output_path="/home/xiaobing/Downloads/RunningScript")
+            num_iters=500 * 56)
 
 latency = stats.latency_avg_ms
 print(latency)
