@@ -4,31 +4,21 @@ import torchvision
 import time
 import torch.profiler as profiler
 from torch.utils import ThroughputBenchmark
+import torch.fx.experimental.optimization as optimization
 
 torch.manual_seed(1000)
-
-ipex.core.disable_jit_opt()
-torch._C._jit_set_profiling_mode(False)
-torch._C._jit_set_profiling_executor(False)
 
 model = torchvision.models.resnet50().eval()
 model = ipex.fx.conv_bn_fuse(model)
 
-warm_up = 200
+warm_up = 300
 #batch_size = 1
 batch_size = 112
 
-ipex.core.disable_jit_opt()
-ipex.core._jit_set_llga_enabled(True)
-torch._C._jit_set_profiling_mode(True)
-torch._C._jit_set_profiling_executor(True)
-model = ipex.fx.conv_bn_fuse(model)
-conf = ipex.AmpConf(torch.int8, 'resnet50_configure.json')
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last)
 
-with torch.no_grad(), ipex.amp.autocast(enabled=True, configure=conf):
-    trace_model = torch.jit.trace(model, x, check_trace=False).eval()
-trace_model = torch.jit._recursive.wrap_cpp_module(torch._C._freeze_module(trace_model._c, preserveParameters=True))
+conf = ipex.QuantConf("resnet50_configure.json")
+trace_model = ipex.quantization.convert(model, conf, x)
 
 # warm_up
 with torch.no_grad():
@@ -37,8 +27,8 @@ with torch.no_grad():
 
 print("begin running...............")
 
-#num_iter = 1000
 num_iter = 500
+#num_iter = 500
 
 fwd = 0
 with torch.no_grad():
@@ -51,10 +41,10 @@ with torch.no_grad():
 avg_time = fwd / num_iter * 1000
 print("batch_size = %d, running time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
 
+'''
 def trace_handler(prof):
     print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=-1))
     #prof.export_chrome_trace("rn50_trace_" + str(prof.step_num) + ".json")
-'''
 with torch.no_grad():
     with profiler.profile(
          activities=[profiler.ProfilerActivity.CPU],
