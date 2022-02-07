@@ -1,5 +1,5 @@
 import torch
-import intel_pytorch_extension as ipex
+import intel_extension_for_pytorch as ipex
 import torchvision
 import time
 import torch.profiler as profiler
@@ -48,17 +48,19 @@ class Model(torch.nn.Module):
 #print(model)
 model = torchvision.models.resnet50().eval()
 model = model.to(memory_format=torch.channels_last)
-model = ipex.optimize(model, dtype=torch.bfloat16, level='O0', inplace=True)
+model = ipex.optimize(model, dtype=torch.bfloat16)
 
 
 warm_up = 300
-#batch_size = 1
-batch_size = 112
+batch_size = 1
+#batch_size = 112
 
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
 
-with ipex.amp.autocast(enabled=True, configure=ipex.conf.AmpConf(torch.bfloat16)), torch.no_grad():
-    trace_model = torch.jit.trace(model, x, check_trace=False).eval()
+with torch.cpu.amp.autocast(), torch.no_grad():
+    trace_model = torch.jit.trace(model, x).eval()
+    trace_model = torch.jit.freeze(trace_model).eval()
+
 
 with torch.no_grad():
     for i in range(warm_up):
