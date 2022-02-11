@@ -37,22 +37,24 @@ class Model(torch.nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         #print(x.size())
+        '''
         x = self.pool2(x)
         x = torch.flatten(x, 1)
         x = self.linear(x)
         x = self.relu(x)
+        '''
         #print(x1)
         return x
 
-#model = Model().eval()
+model = Model().eval()
 #print(model)
 model = torchvision.models.resnet50().eval()
 model = model.to(memory_format=torch.channels_last)
 model = ipex.optimize(model, dtype=torch.bfloat16)
 
 
-warm_up = 300
-batch_size = 1
+warm_up = 200
+batch_size = 10
 #batch_size = 112
 
 x = torch.randn(batch_size, 3, 224, 224).contiguous(memory_format=torch.channels_last).to(torch.bfloat16)
@@ -68,7 +70,7 @@ with torch.no_grad():
 
 print("begin running...............")
 
-num_iter = 1000
+num_iter = 300 
 fwd = 0
 
 with torch.no_grad():
@@ -79,7 +81,7 @@ with torch.no_grad():
     fwd = fwd + (t2 - t1)
 
 avg_time = fwd / num_iter * 1000
-print("batch_size = %d, running time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
+print("batch_size = %d, avg time is %0.3f (ms) fps:%f"%(batch_size, avg_time, batch_size  * num_iter / fwd))
 '''
 num_instance=14
 with torch.no_grad():
